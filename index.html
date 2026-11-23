@@ -19,7 +19,6 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{
   margin:0;
-  /* cream wall color — matches wall, so no green flash is ever possible */
   background:var(--wall);
   font-family:Outfit,system-ui,sans-serif;
   color:#fff;
@@ -28,9 +27,6 @@ body{
 }
 #spacer{height:calc(100vh + 6600px)}
 
-/* ============================================================
-   STAGE: 3D track scene (hidden until wall fades)
-   ============================================================ */
 #stage{
   position:fixed; inset:0;
   overflow:hidden;
@@ -51,18 +47,23 @@ body{
   perspective-origin:50% 42%;
   will-change:opacity;
 }
-/* sun baked into stage ::before */
-#stage::before{
-  content:"";
+
+/* Sun is now a real element — position is animated by JS every frame
+   via transform: translate3d(), which is compositor-only (no layout,
+   no repaint). */
+#sun{
   position:absolute;
-  left:78%; top:11%;
+  left:0; top:0;
   width:80px; height:80px;
-  margin-left:-40px;
+  margin:-40px 0 0 -40px;   /* center sits at translate3d origin */
   border-radius:50%;
   background:radial-gradient(circle,#fffbe0 0 35%,rgba(255,226,140,.5) 55%,transparent 75%);
   pointer-events:none;
+  will-change:transform;
+  backface-visibility:hidden;
+  transform:translate3d(0,0,0);
 }
-/* distant tree line at horizon */
+
 #stage::after{
   content:"";
   position:absolute;
@@ -109,7 +110,6 @@ body{
   background:repeating-linear-gradient(180deg, rgba(255,255,255,.65) 0 70px, transparent 70px 180px);
 }
 
-/* Cards, arches, trees */
 .card,.arch,.tree{
   position:absolute; left:0; top:0;
   will-change:opacity;
@@ -155,9 +155,6 @@ body{
   filter:drop-shadow(0 14px 10px rgba(0,0,0,.28));
 }
 
-/* ============================================================
-   WALL: cream plaster with the poster (the hero)
-   ============================================================ */
 #wall{
   position:fixed; inset:0;
   z-index:2;
@@ -247,13 +244,10 @@ body{
 }
 @keyframes bob{50%{transform:translateY(6px)}}
 
-/* ============================================================
-   OVERLAYS + HUD
-   ============================================================ */
 #vig{
   position:fixed; inset:0;
   pointer-events:none;
-  z-index:1;             /* same as stage, paints above it via DOM order */
+  z-index:1;
   background:radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.35));
 }
 #bar{
@@ -326,9 +320,6 @@ body{
 }
 #end p{margin:12px 0 0; font-weight:700; font-size:15px}
 
-/* ============================================================
-   MOBILE
-   ============================================================ */
 @media (max-width:820px){
   :root{--cw:180px;--ph:112px}
   #spacer{height:calc(100vh + 5400px)}
@@ -346,8 +337,8 @@ body{
         #2d7a4f 60%,
         #1c5c3b 100%);
   }
-  #stage::before{width:60px; height:60px; margin-left:-30px; top:10%}
   #stage::after{top:40%; height:5vh; opacity:.5}
+  #sun{width:60px; height:60px; margin:-30px 0 0 -30px}
 
   .ground{
     width:1200px; height:5000px;
@@ -409,14 +400,13 @@ body{
 <body>
 <div id="spacer"></div>
 
-<!-- Layer 1: 3D walking track (hidden behind wall at start) -->
 <div id="stage">
+  <div id="sun"></div>
   <div id="world">
     <div class="ground"></div>
   </div>
 </div>
 
-<!-- Layer 2: Wall with poster (fully CSS-painted at page load) -->
 <div id="wall">
   <div id="poster">
     <small>SEERAT CLASS PRESENTS</small>
@@ -469,7 +459,6 @@ function mk(c, h, bg){
   return e;
 }
 
-/* Compressed schedule for MAX = 3300 */
 var S = [
   {z: 500, a:1, em:'🕌', t:'Meet at Tipu Sultan Masjid', s:'7:30 AM sharp'},
   {z:1000, side:-1, em:'📖', t:'Tilawat', s:'7:45 AM'},
@@ -498,7 +487,6 @@ S.forEach(function(s){
   }
 });
 
-/* Trees — fewer on mobile */
 var TR = ['🌳','🌴','🌲','🌳','🌿'];
 if(M){
   var treePos = [[200,-1],[700,1],[1200,-1],[1700,1],[2200,-1],[2700,1],[2900,-1],[3100,1]];
@@ -524,7 +512,6 @@ if(M){
   }
 }
 
-/* Landmark emojis */
 var mFs = M?150:270;
 var mosque = mk('tree','🕌'); mosque.style.fontSize = mFs+'px';
 add(mosque, M?250:460, 190 - mFs*0.5, 700, 0);
@@ -535,7 +522,6 @@ add(trophy, 0, 190 - tFs*0.42, 3550, 0);
 
 world.appendChild(frag);
 
-/* Caption groups */
 var seen = {}, groups = [];
 S.forEach(function(s){
   if(seen[s.z]) return;
@@ -547,16 +533,15 @@ S.forEach(function(s){
   });
 });
 
-/* Elements */
 var stage   = document.getElementById('stage');
 var wall    = document.getElementById('wall');
 var poster  = document.getElementById('poster');
+var sunEl   = document.getElementById('sun');
 var clockEl = document.getElementById('clock');
 var capEl   = document.getElementById('cap');
 var endEl   = document.getElementById('end');
 var barEl   = document.getElementById('bar');
 
-/* Time mapping */
 var hist = [[0,430],[500,450],[1000,470],[1500,505],[2000,555],[2500,650],[2850,690],[3050,700],[3300,720]];
 function fmt(m){
   var h = Math.floor(m/60), mm = Math.floor(m%60);
@@ -572,18 +557,24 @@ function time(c){
   return 720;
 }
 
-/* State */
 var cam = 0;
 var docH = 0;
+var vw = window.innerWidth, vh = window.innerHeight;
+
 var lastClockOp = -1, lastCapOp = -1, lastCapMsg = '', lastBarW = -1;
 var lastWallOp = -1, lastStageOp = -1, lastPosterT = '';
+var lastSunT = '';
 var wallHidden = false, endOn = false;
 var TRANS_START = 200, TRANS_END = 700;
 
 function measure(){
   var h = document.documentElement.scrollHeight - window.innerHeight;
   if(h < 1) h = 1;
-  if(!docH || Math.abs(h - docH) > 150) docH = h;
+  if(!docH || Math.abs(h - docH) > 150){
+    docH = h;
+    vw = window.innerWidth;
+    vh = window.innerHeight;
+  }
 }
 window.addEventListener('resize', measure, {passive:true});
 window.addEventListener('orientationchange', function(){ setTimeout(measure, 250); }, {passive:true});
@@ -600,7 +591,19 @@ function frame(){
 
   var q = Math.min(1, cam / MAX);
 
-  /* ---- Wall → Stage transition ---- */
+  /* Sun moves across the sky with time:
+     7:30 AM -> low & left   (68%, 25%)
+     12:00 PM -> high & right (82%, 6%)
+     Only touches transform:translate3d -> compositor-only. */
+  var sunX = vw * (0.68 + q * 0.14);
+  var sunY = vh * (0.25 - q * 0.19);
+  var sunT = 'translate3d(' + sunX.toFixed(0) + 'px,' + sunY.toFixed(0) + 'px,0)';
+  if(sunT !== lastSunT){
+    lastSunT = sunT;
+    sunEl.style.transform = sunT;
+  }
+
+  /* Wall -> Stage transition */
   var t = clamp01((cam - TRANS_START) / (TRANS_END - TRANS_START));
   var wallOp  = 1 - t;
   var stageOp = t;
@@ -625,7 +628,6 @@ function frame(){
     stage.style.opacity = stageOp;
   }
 
-  /* Poster scales up + slides as it fades */
   if(t > 0 || lastPosterT === ''){
     var posterT = 'translate3d(0,'+(-t*40).toFixed(1)+'px,0) scale('+(1 + t*0.35).toFixed(3)+')';
     if(posterT !== lastPosterT){
@@ -634,7 +636,6 @@ function frame(){
     }
   }
 
-  /* ---- 3D world (only when stage is visible) ---- */
   if(stageOp > 0.001){
     var bob  = cam > 5 ? Math.sin(cam/55) * 5 : 0;
     var roll = Math.sin(cam/110) * 0.3;
@@ -656,7 +657,6 @@ function frame(){
     }
   }
 
-  /* ---- HUD ---- */
   var clockOp = stageOp > 0.5 ? 1 : 0;
   if(clockOp !== lastClockOp){
     lastClockOp = clockOp;
@@ -672,7 +672,6 @@ function frame(){
     barEl.style.opacity = stageOp > 0.3 ? 1 : 0;
   }
 
-  /* ---- Caption ---- */
   var g = null;
   for(var gi=0; gi<groups.length; gi++){
     if(groups[gi].z - cam > -250){ g = groups[gi]; break; }
@@ -682,7 +681,6 @@ function frame(){
   var capOp = msg ? 1 : 0;
   if(capOp !== lastCapOp){ lastCapOp = capOp; capEl.style.opacity = capOp; }
 
-  /* ---- End card ---- */
   var on = q > 0.95;
   if(on !== endOn){ endOn = on; endEl.classList.toggle('on', on); }
 
