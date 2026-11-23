@@ -19,8 +19,14 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:#1c5c3b;font-family:Outfit,system-ui,sans-serif;color:#fff;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 #spacer{height:calc(100vh + 8600px)}
-#sky{position:fixed;left:0;right:0;top:0;height:var(--skyh);overflow:hidden}
-#sun{position:absolute;left:62%;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#fffbe0 0 30%,rgba(255,226,140,.8) 45%,transparent 70%);margin-left:-60px}
+
+/* sky now has a CSS fallback gradient (matches JS frame #1) so the green body
+   never flashes through while JS boots / while the GPU layer settles */
+#sky{
+  position:fixed;left:0;right:0;top:0;height:var(--skyh);overflow:hidden;
+  background:linear-gradient(rgb(22,48,88),rgb(255,176,102));
+}
+#sun{position:absolute;left:62%;top:32vh;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#fffbe0 0 30%,rgba(255,226,140,.8) 45%,transparent 70%);margin-left:-60px}
 .cloud{position:absolute;width:240px;height:60px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.75),transparent 70%);filter:blur(4px)}
 #hills{position:absolute;left:0;bottom:0;width:100%;height:100px}
 #haze{position:fixed;left:0;right:0;top:calc(var(--skyh) - 10px);height:24vh;pointer-events:none}
@@ -67,25 +73,27 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
 #end p{margin:12px 0 0;font-weight:700;font-size:16px}
 
 /* ============================================================
-   MOBILE / SMALL SCREENS  (phones & small tablets)
-   Desktop & Chromebooks (>= 821px) are completely untouched.
+   MOBILE / SMALL SCREENS (<=820px)
+   Desktop & Chromebooks are untouched.
    ============================================================ */
 @media (max-width:820px){
   :root{--cw:176px;--ph:112px;--skyh:44vh}
 
   #spacer{height:calc(100vh + 7000px)}
 
-  /* --- sky: sun now sits INSIDE the visible sky band --- */
-  #sky{height:var(--skyh)}
-  #sun{left:68%;width:88px;height:88px;margin-left:-44px}
+  /* Promote sky to its own layer so 3D siblings can't make it flicker */
+  #sky{
+    height:var(--skyh);
+    transform:translateZ(0);
+    backface-visibility:hidden;
+  }
+  #sun{left:68%;top:34%;width:88px;height:88px;margin-left:-44px}
   #hills{height:70px}
   #haze{top:calc(var(--skyh) - 10px);height:20vh}
   .cloud{filter:none;opacity:.5;width:170px;height:44px;will-change:transform}
 
-  /* --- cheaper stage: one stable composited layer --- */
   #stage{will-change:transform;transform:translate3d(0,0,0);perspective:640px}
 
-  /* --- smaller ground plane = far less GPU memory / repaint --- */
   .ground{
     width:2000px;height:14000px;
     transform:translate3d(-1000px,190px,3400px) rotateX(-90deg);
@@ -98,7 +106,6 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
   }
   .ground::after{left:calc(50% - 5px);width:10px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.7) 0 60px,transparent 60px 160px)}
 
-  /* --- cards: smaller, cheaper shadows, NO forced layers --- */
   .card,.arch,.tree{will-change:auto}
   .tree{filter:none}
 
@@ -114,7 +121,6 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
   .arch::before,.arch::after{width:6px;height:170px}
   .arch::before{left:12px}.arch::after{right:12px}
 
-  /* --- HUD: no backdrop-filter (big jank source on phones) --- */
   #clock{padding:6px 14px;font-size:15px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(13,31,25,.92)}
   #cap{padding:9px 16px;font-size:14px;max-width:94vw;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(13,31,25,.92)}
   #end{padding:14px;border-radius:18px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(10,30,22,.96)}
@@ -122,7 +128,6 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
   #end q{font-size:13px;padding:5px 9px}
   #end p{font-size:14px;margin-top:10px}
 
-  /* --- hero --- */
   #hero{top:calc(env(safe-area-inset-top,0px) + 8vh);padding:0 14px}
   #hero small{font-size:10px;letter-spacing:.28em}
   #hero h1{font-size:clamp(38px,15vw,74px);margin:4px 0 6px}
@@ -133,7 +138,6 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
   #vig{background:radial-gradient(ellipse at 50% 45%,transparent 60%,rgba(0,0,0,.35))}
 }
 
-/* tiny phones */
 @media (max-width:380px){
   :root{--cw:158px;--ph:100px}
   #hero h1{font-size:clamp(34px,15vw,60px)}
@@ -173,7 +177,6 @@ linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - va
 (function(){
 "use strict";
 
-/* ---------- device mode (desktop unchanged) ---------- */
 var MQ = matchMedia('(max-width:820px)');
 var M  = MQ.matches;
 var X  = M ? 200 : 330;
@@ -181,11 +184,16 @@ var MAX = 10000;
 
 var world = document.getElementById('world');
 var items = [];
+var frag  = document.createDocumentFragment();   /* build off-DOM */
 
 function add(el,x,y,z,r){
   r = r || 0;
   el.style.transform = 'translate3d('+x+'px,'+y+'px,'+(-z)+'px) rotateY('+r+'deg) translate(-50%,-50%)';
-  world.appendChild(el);
+  /* CRITICAL: start hidden so the first paint does NOT render every card/tree.
+     frame() will reveal only the ones actually in view. */
+  el.style.opacity = '0';
+  el.style.visibility = 'hidden';
+  frag.appendChild(el);
   items.push({el:el, z:z, o:-1});
 }
 function mk(c,h,bg){
@@ -223,7 +231,6 @@ S.forEach(function(s){
   }
 });
 
-/* landmark emojis (smaller on phones) */
 var mFs = M?170:300, mX = M?290:520;
 var mosque = mk('tree','🕌'); mosque.style.fontSize = mFs+'px';
 add(mosque, mX, 190 - mFs*0.5, 1500, 0);
@@ -232,7 +239,6 @@ var tFs = M?150:260;
 var trophy = mk('tree','🏆'); trophy.style.fontSize = tFs+'px';
 add(trophy, 0, 190 - tFs*0.42, 10420, 0);
 
-/* ---------- trees (fewer + smaller on mobile) ---------- */
 var TR = ['🌳','🌴','🌲','🌳','🌿'];
 var n = 0;
 var step   = M ? 620 : 330;
@@ -254,6 +260,9 @@ for(var z=300; z<10700; z+=step){
   }
 }
 
+/* append everything in ONE operation -> one layout, one paint */
+world.appendChild(frag);
+
 /* ---------- groups for the caption ---------- */
 var seen = {}, groups = [];
 S.forEach(function(s){
@@ -261,14 +270,11 @@ S.forEach(function(s){
   seen[s.z] = 1;
   var g = S.filter(function(x){ return x.z === s.z; });
   groups.push({
-    z: s.z,
-    e: g[0].em,
-    s: g[0].s,
+    z: s.z, e: g[0].em, s: g[0].s,
     t: g.map(function(x){ return x.t.replace('&amp;','&'); }).join(' · ')
   });
 });
 
-/* ---------- elements ---------- */
 var sky    = document.getElementById('sky'),
     sun    = document.getElementById('sun'),
     haze   = document.getElementById('haze'),
@@ -281,6 +287,7 @@ var sky    = document.getElementById('sky'),
 
 var L = function(a,b,t){ return a.map(function(v,i){ return Math.round(v+(b[i]-v)*t); }).join(','); };
 function fmt(m){ var h=Math.floor(m/60), mm=Math.floor(m%60); return (h%12||12)+':'+String(mm).padStart(2,'0')+' '+(h>=12?'PM':'AM'); }
+var hist = [[0,430],[1300,450],[2600,480],[4000,510],[5400,575],[6800,650],[7600,695],[8200,700],[10000,720]];
 function time(c){
   for(var i=1;i<hist.length;i++){
     if(c<=hist[i][0]){
@@ -290,26 +297,22 @@ function time(c){
   }
   return 720;
 }
-var hist = [[0,430],[1300,450],[2600,480],[4000,510],[5400,575],[6800,650],[7600,695],[8200,700],[10000,720]];
 
-/* ---------- cached state ---------- */
 var cam = 0;
 var docH = 0, vw = window.innerWidth;
-var lastSky = '', lastHaze = '', lastSun = '', lastClock = '', lastCap = '', lastCapOp = -1;
-var lastBar = -1, lastHero = -1, endOn = false;
+var lastSky='', lastHaze='', lastSun='', lastClock='', lastCap='', lastCapOp=-1;
+var lastBar=-1, lastHero=-1, endOn=false;
 
-/* measure scroll length ONCE-ish — ignores mobile URL-bar jitter */
 function measure(){
   var h = document.documentElement.scrollHeight - window.innerHeight;
   if(h < 1) h = 1;
-  if(!docH || Math.abs(h - docH) > 150) docH = h;   /* real change = rotation */
+  /* ignore small URL-bar jitter on mobile */
+  if(!docH || Math.abs(h - docH) > 150) docH = h;
   vw = window.innerWidth;
 }
 window.addEventListener('resize', measure, {passive:true});
 window.addEventListener('orientationchange', function(){ setTimeout(measure, 250); }, {passive:true});
-measure();
 
-/* ---------- main loop ---------- */
 function frame(){
   var max = docH || 1;
   var p = Math.min(1, Math.max(0, window.scrollY / max));
@@ -320,12 +323,10 @@ function frame(){
 
   var q = Math.min(1, cam / MAX);
 
-  /* world */
   var bob  = cam > 5 ? Math.sin(cam/55) * 6 : 0;
   var roll = Math.sin(cam/110) * 0.35;
   world.style.transform = 'translate3d(0,'+bob.toFixed(1)+'px,'+cam.toFixed(1)+'px) rotateZ('+roll.toFixed(2)+'deg)';
 
-  /* sky + haze (only repaint when the colour actually changes) */
   var top = L([22,48,88],[84,168,236],q);
   var hz  = L([255,176,102],[208,236,255],q);
 
@@ -339,17 +340,14 @@ function frame(){
     sky.style.background = skyCss;
   }
 
-  /* sun — % of sky height on mobile so it is always visible */
   var sunTop = M ? Math.round(34 - q*20) + '%' : Math.round(32 - q*26) + 'vh';
   if(sunTop !== lastSun){ lastSun = sunTop; sun.style.top = sunTop; }
 
-  /* clouds */
   var cw = vw + 500;
   for(var ci=0; ci<clouds.length; ci++){
     clouds[ci].style.transform = 'translateX('+(((cam*(0.03+ci*0.01)+ci*300)%cw)-250)+'px)';
   }
 
-  /* cards / arches / trees */
   for(var i=0;i<items.length;i++){
     var it = items[i];
     var d = it.z - cam;
@@ -357,7 +355,7 @@ function frame(){
     if(d < 160) o = d/160;
     if(d > 3000) o = Math.min(o, (4800-d)/1800);
     if(o < 0) o = 0; else if(o > 1) o = 1;
-    o = Math.round(o*10)/10;                    /* quantised: far fewer style writes */
+    o = Math.round(o*10)/10;
     if(o !== it.o){
       it.o = o;
       it.el.style.opacity = o;
@@ -365,19 +363,15 @@ function frame(){
     }
   }
 
-  /* hero */
   var ho = Math.round(Math.max(0, 1 - cam/500) * 20) / 20;
   if(ho !== lastHero){ lastHero = ho; hero.style.opacity = ho; }
 
-  /* clock */
   var cl = '🕢 ' + fmt(time(cam));
   if(cl !== lastClock){ lastClock = cl; clock.textContent = cl; }
 
-  /* progress bar */
   var bw = Math.round(q*100);
   if(bw !== lastBar){ lastBar = bw; bar.style.width = bw + '%'; }
 
-  /* caption */
   var g = null;
   for(var gi=0; gi<groups.length; gi++){ if(groups[gi].z - cam > -250){ g = groups[gi]; break; } }
   var msg = (g && cam > 500) ? g.e + ' ' + g.t + '<em>' + g.s + '</em>' : '';
@@ -385,20 +379,20 @@ function frame(){
   var capOp = (msg && q < 0.95) ? 1 : 0;
   if(capOp !== lastCapOp){ lastCapOp = capOp; cap.style.opacity = capOp; }
 
-  /* end card */
   var on = q > 0.96;
   if(on !== endOn){ endOn = on; endEl.classList.toggle('on', on); }
 
   requestAnimationFrame(frame);
 }
 
-requestAnimationFrame(frame);
+/* Boot AFTER one rAF: by then the browser has painted the CSS sky + hero,
+   so there's no green flash while the 3D layer is being set up. */
+requestAnimationFrame(function boot(){
+  measure();
+  frame();
+});
 
-/* re-measure when webfont arrives (text metrics change) */
-if(document.fonts && document.fonts.ready){ document.fonts.ready.then(measure); }
-
-/* if the layout breakpoint changes (rotate / resize), just reload cleanly */
-MQ.addEventListener('change', function(){ location.reload(); });
+if(MQ.addEventListener) MQ.addEventListener('change', function(){ location.reload(); });
 })();
 </script>
 </body>
