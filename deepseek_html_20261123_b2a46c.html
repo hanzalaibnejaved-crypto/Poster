@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c5c3b">
+<title>Activity Day · Walk the Path</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap">
+<style>
+:root{
+  --green:#0f7a55;--gold:#f2b43a;--ink:#0d1f19;
+  --cw:260px;--ph:170px;--skyh:42vh;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px)
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:#1c5c3b;font-family:Outfit,system-ui,sans-serif;color:#fff;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+#spacer{height:calc(100vh + 8600px)}
+#sky{position:fixed;left:0;right:0;top:0;height:var(--skyh);overflow:hidden}
+#sun{position:absolute;left:62%;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#fffbe0 0 30%,rgba(255,226,140,.8) 45%,transparent 70%);margin-left:-60px}
+.cloud{position:absolute;width:240px;height:60px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.75),transparent 70%);filter:blur(4px)}
+#hills{position:absolute;left:0;bottom:0;width:100%;height:100px}
+#haze{position:fixed;left:0;right:0;top:calc(var(--skyh) - 10px);height:24vh;pointer-events:none}
+#stage{position:fixed;inset:0;perspective:700px;perspective-origin:50% 42%;overflow:hidden}
+#world{position:absolute;left:50%;top:42%;width:0;height:0;transform-style:preserve-3d}
+.ground{position:absolute;left:0;top:0;width:3200px;height:18000px;transform-origin:0 0;transform:translate3d(-1600px,190px,2200px) rotateX(-90deg);
+background:repeating-linear-gradient(180deg,rgba(255,255,255,.05) 0 240px,transparent 240px 480px),
+linear-gradient(90deg,#1c5c3b calc(50% - var(--ph) - 16px),#7d5f3d calc(50% - var(--ph) - 16px) calc(50% - var(--ph)),#d8c196 calc(50% - var(--ph)) calc(50% + var(--ph)),#7d5f3d calc(50% + var(--ph)) calc(50% + var(--ph) + 16px),#1c5c3b calc(50% + var(--ph) + 16px))}
+.ground::after{content:"";position:absolute;left:calc(50% - 7px);width:14px;top:0;bottom:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.7) 0 80px,transparent 80px 220px)}
+.card,.arch,.tree{position:absolute;left:0;top:0;will-change:opacity}
+.card{width:var(--cw);padding:18px 14px;border-radius:26px;text-align:center;background:linear-gradient(160deg,#143d2e,#0d241c);border:2px solid rgba(94,214,160,.4);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.card i,.arch i{display:block;font-style:normal;font-size:56px;line-height:1.1}
+.card b{display:block;font-size:26px;font-weight:700;line-height:1.1;margin-top:6px}
+.card span{display:block;margin-top:6px;font-weight:600;font-size:21px;color:#5ee0a3}
+.card.team span{color:#fff;opacity:.85}
+.arch{width:calc(var(--cw)*2.2);padding:14px 22px;border-radius:22px;text-align:center;background:linear-gradient(160deg,#0f7a55,#0a4a35);border:3px solid var(--gold);box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.arch.gold{background:linear-gradient(160deg,#f6c24f,#e9a420);color:#2a1c00;border-color:#fff3c8}
+.arch i{display:inline-block;font-size:42px}
+.arch b{display:block;font-size:30px;line-height:1.1}
+.arch span{font-weight:600;font-size:22px;opacity:.9}
+.arch::before,.arch::after{content:"";position:absolute;top:100%;width:9px;height:300px;background:linear-gradient(#e9d6a8,#8a6a45)}
+.arch::before{left:18px}.arch::after{right:18px}
+.tree{line-height:1;user-select:none;filter:drop-shadow(0 18px 14px rgba(0,0,0,.3))}
+#vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.45))}
+#hero{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 12vh);text-align:center;padding:0 16px;pointer-events:none;text-shadow:0 4px 24px rgba(0,0,0,.45)}
+#hero small{letter-spacing:.35em;font-size:13px;font-weight:600}
+#hero h1{margin:6px 0 8px;font-size:clamp(46px,13vw,120px);font-weight:800;line-height:.95}
+#hero h1 em{font-style:normal;color:var(--gold)}
+#hero p{margin:0 auto;max-width:520px;font-size:clamp(15px,4vw,20px)}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.chips span{background:rgba(13,31,25,.7);padding:8px 14px;border-radius:14px;font-weight:600;font-size:15px;backdrop-filter:blur(6px)}
+#cue{margin-top:26px;font-weight:600;letter-spacing:.2em;font-size:12px;animation:bob 1.6s infinite}
+@keyframes bob{50%{transform:translateY(8px)}}
+#clock,#cap{position:fixed;left:50%;transform:translateX(-50%);background:rgba(13,31,25,.78);backdrop-filter:blur(8px);border:1px solid rgba(94,214,160,.4);border-radius:999px;font-weight:700;white-space:nowrap;pointer-events:none;transition:opacity .3s}
+#clock{top:calc(env(safe-area-inset-top,0px) + 12px);padding:8px 18px;font-size:18px;color:var(--gold)}
+#cap{bottom:calc(env(safe-area-inset-bottom,0px) + 22px);padding:12px 22px;font-size:clamp(15px,4vw,19px);max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#cap em{font-style:normal;color:#5ee0a3;margin-left:8px}
+#bar{position:fixed;left:0;top:0;height:4px;background:var(--gold);width:0}
+#end{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translate(-50%,30px);width:min(640px,94vw);padding:18px;border-radius:24px;background:rgba(10,30,22,.9);backdrop-filter:blur(10px);border:1px solid rgba(94,214,160,.4);text-align:center;opacity:0;pointer-events:none;transition:.5s}
+#end.on{opacity:1;transform:translate(-50%,0)}
+#end h3{margin:0 0 10px;font-size:13px;letter-spacing:.25em;color:#5ee0a3}
+#end .chips{margin:0 0 12px}#end .chips span{background:#16352a;font-size:14px;padding:6px 12px}
+#end q{display:block;font-style:italic;font-size:15px;opacity:.85;border-left:4px solid var(--gold);padding:6px 12px;text-align:left;quotes:none}
+#end p{margin:12px 0 0;font-weight:700;font-size:16px}
+
+/* ============================================================
+   MOBILE / SMALL SCREENS  (phones & small tablets)
+   Desktop & Chromebooks (>= 821px) are completely untouched.
+   ============================================================ */
+@media (max-width:820px){
+  :root{--cw:176px;--ph:112px;--skyh:44vh}
+
+  #spacer{height:calc(100vh + 7000px)}
+
+  /* --- sky: sun now sits INSIDE the visible sky band --- */
+  #sky{height:var(--skyh)}
+  #sun{left:68%;width:88px;height:88px;margin-left:-44px}
+  #hills{height:70px}
+  #haze{top:calc(var(--skyh) - 10px);height:20vh}
+  .cloud{filter:none;opacity:.5;width:170px;height:44px;will-change:transform}
+
+  /* --- cheaper stage: one stable composited layer --- */
+  #stage{will-change:transform;transform:translate3d(0,0,0);perspective:640px}
+
+  /* --- smaller ground plane = far less GPU memory / repaint --- */
+  .ground{
+    width:2000px;height:14000px;
+    transform:translate3d(-1000px,190px,3400px) rotateX(-90deg);
+    background:linear-gradient(90deg,
+      #1c5c3b calc(50% - var(--ph) - 12px),
+      #7d5f3d calc(50% - var(--ph) - 12px) calc(50% - var(--ph)),
+      #d8c196 calc(50% - var(--ph)) calc(50% + var(--ph)),
+      #7d5f3d calc(50% + var(--ph)) calc(50% + var(--ph) + 12px),
+      #1c5c3b calc(50% + var(--ph) + 12px))
+  }
+  .ground::after{left:calc(50% - 5px);width:10px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.7) 0 60px,transparent 60px 160px)}
+
+  /* --- cards: smaller, cheaper shadows, NO forced layers --- */
+  .card,.arch,.tree{will-change:auto}
+  .tree{filter:none}
+
+  .card{width:var(--cw);padding:11px 10px;border-radius:16px;border-width:1px;box-shadow:0 8px 18px rgba(0,0,0,.38)}
+  .card i{font-size:34px}
+  .card b{font-size:17px;margin-top:3px}
+  .card span{font-size:14px;margin-top:3px}
+
+  .arch{width:min(calc(var(--cw)*2.2),86vw);padding:10px 14px;border-radius:15px;border-width:2px;box-shadow:0 8px 18px rgba(0,0,0,.38)}
+  .arch i{font-size:28px}
+  .arch b{font-size:19px}
+  .arch span{font-size:14px}
+  .arch::before,.arch::after{width:6px;height:170px}
+  .arch::before{left:12px}.arch::after{right:12px}
+
+  /* --- HUD: no backdrop-filter (big jank source on phones) --- */
+  #clock{padding:6px 14px;font-size:15px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(13,31,25,.92)}
+  #cap{padding:9px 16px;font-size:14px;max-width:94vw;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(13,31,25,.92)}
+  #end{padding:14px;border-radius:18px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(10,30,22,.96)}
+  #end .chips span{font-size:12px;padding:5px 9px}
+  #end q{font-size:13px;padding:5px 9px}
+  #end p{font-size:14px;margin-top:10px}
+
+  /* --- hero --- */
+  #hero{top:calc(env(safe-area-inset-top,0px) + 8vh);padding:0 14px}
+  #hero small{font-size:10px;letter-spacing:.28em}
+  #hero h1{font-size:clamp(38px,15vw,74px);margin:4px 0 6px}
+  #hero p{font-size:14px;max-width:300px}
+  .chips{gap:6px;margin-top:12px}
+  .chips span{font-size:12px;padding:6px 10px;border-radius:10px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(13,31,25,.85)}
+  #cue{margin-top:16px;font-size:10px;letter-spacing:.18em}
+  #vig{background:radial-gradient(ellipse at 50% 45%,transparent 60%,rgba(0,0,0,.35))}
+}
+
+/* tiny phones */
+@media (max-width:380px){
+  :root{--cw:158px;--ph:100px}
+  #hero h1{font-size:clamp(34px,15vw,60px)}
+  .card b{font-size:15px}
+  .card span{font-size:12.5px}
+  .card i{font-size:30px}
+}
+</style>
+</head>
+<body>
+<div id="spacer"></div>
+<div id="sky">
+  <div id="sun"></div>
+  <div class="cloud" style="top:8vh"></div><div class="cloud" style="top:17vh;width:300px"></div><div class="cloud" style="top:26vh;width:200px"></div>
+  <svg id="hills" viewBox="0 0 800 100" preserveAspectRatio="none"><path d="M0 60 Q120 10 260 50 T520 40 T800 55 V100 H0Z" fill="#2f7a5c" opacity=".7"/><path d="M0 80 Q150 35 300 70 T600 65 T800 75 V100 H0Z" fill="#1c5c3b"/></svg>
+</div>
+<div id="haze"></div>
+<div id="stage"><div id="world"><div class="ground"></div></div></div>
+<div id="vig"></div>
+<div id="bar"></div>
+<div id="hero">
+  <small>SEERAT CLASS PRESENTS</small>
+  <h1>ACTIVITY <em>DAY</em></h1>
+  <p>Learn. Play. Bond. Be a strong and joyful believer 🌿</p>
+  <div class="chips"><span>📅 Sat, 28 Nov</span><span>⏰ 7:30 AM</span><span>📍 Malir Cantt</span></div>
+  <div id="cue">SCROLL TO START WALKING ↓</div>
+</div>
+<div id="clock">🕢 7:10 AM</div>
+<div id="cap" style="opacity:0"></div>
+<div id="end">
+  <h3>🎒 BRING &amp; REMEMBER</h3>
+  <div class="chips"><span>💧 Water bottle</span><span>🧢 Cap</span><span>👟 Sports shoes</span><span>👕 Extra clothes</span><span>⏱️ Be on time</span><span>🤝 Respect all</span><span>🤲 Say Bismillah</span></div>
+  <q>“The strong believer is better and more beloved to Allah than the weak believer.” (Sahih Muslim)</q>
+  <p>Come ready. Play fair. Win with adab. See you Saturday, in sha Allah!</p>
+</div>
+<script>
+(function(){
+"use strict";
+
+/* ---------- device mode (desktop unchanged) ---------- */
+var MQ = matchMedia('(max-width:820px)');
+var M  = MQ.matches;
+var X  = M ? 200 : 330;
+var MAX = 10000;
+
+var world = document.getElementById('world');
+var items = [];
+
+function add(el,x,y,z,r){
+  r = r || 0;
+  el.style.transform = 'translate3d('+x+'px,'+y+'px,'+(-z)+'px) rotateY('+r+'deg) translate(-50%,-50%)';
+  world.appendChild(el);
+  items.push({el:el, z:z, o:-1});
+}
+function mk(c,h,bg){
+  var e = document.createElement('div');
+  e.className = c; e.innerHTML = h;
+  if(bg) e.style.background = bg;
+  return e;
+}
+
+/* ---------- schedule ---------- */
+var S = [
+ {z:1300,a:1,em:'🕌',t:'Meet at Tipu Sultan Masjid',s:'7:30 AM sharp'},
+ {z:2600,side:-1,em:'📖',t:'Tilawat',s:'7:45 AM'},
+ {z:2600,side:1,em:'🎤',t:'Naat',s:'8:00 AM'},
+ {z:4000,a:1,gold:1,em:'🎾',t:'Padel Tennis',s:'8:30 – 9:30 AM'},
+ {z:5400,side:-1,em:'💪',t:'Hand Wrestling',s:'9:35 AM'},
+ {z:5400,side:1,em:'🏃',t:'Rally Race',s:'10:05 AM'},
+ {z:6800,side:-1,em:'🧠',t:'Quiz Competition',s:'10:50 AM'},
+ {z:6800,side:1,em:'🥪',t:'Nashta',s:'11:35 AM'},
+ {z:8000,a:1,em:'🏅',t:'Teams · Win the Seerat Trophy',s:'Earn points!'},
+ {z:8800,side:-1,team:'#0f7d55',em:'🚩',t:'Siddiq',s:'Team'},
+ {z:8800,side:1,team:'#c4562a',em:'🚩',t:'Umar',s:'Team'},
+ {z:9400,side:-1,team:'#2c6db5',em:'🚩',t:'Uthman',s:'Team'},
+ {z:9400,side:1,team:'#8a4fb5',em:'🚩',t:'Ali',s:'Team'},
+ {z:10250,a:1,gold:1,em:'🏆',t:'Closing, Prizes &amp; Group Photo',s:'12:00 PM'}
+];
+
+S.forEach(function(s){
+  if(s.a){
+    add(mk('arch'+(s.gold?' gold':''),'<i>'+s.em+'</i><b>'+s.t+'</b><span>'+s.s+'</span>'),0,-175,s.z);
+  } else {
+    var bg = s.team ? 'linear-gradient(160deg,'+s.team+',#0d241c 130%)' : null;
+    add(mk('card'+(s.team?' team':''),'<i>'+s.em+'</i><b>'+s.t+'</b><span>'+s.s+'</span>',bg),
+        s.side*X,-10,s.z,-s.side*20);
+  }
+});
+
+/* landmark emojis (smaller on phones) */
+var mFs = M?170:300, mX = M?290:520;
+var mosque = mk('tree','🕌'); mosque.style.fontSize = mFs+'px';
+add(mosque, mX, 190 - mFs*0.5, 1500, 0);
+
+var tFs = M?150:260;
+var trophy = mk('tree','🏆'); trophy.style.fontSize = tFs+'px';
+add(trophy, 0, 190 - tFs*0.42, 10420, 0);
+
+/* ---------- trees (fewer + smaller on mobile) ---------- */
+var TR = ['🌳','🌴','🌲','🌳','🌿'];
+var n = 0;
+var step   = M ? 620 : 330;
+var baseX  = M ? 250 : 520;
+var varX   = M ? 80  : 220;
+var baseSz = M ? 92  : 170;
+var varSz  = M ? 50  : 90;
+
+for(var z=300; z<10700; z+=step){
+  var skip = false;
+  for(var i=0;i<S.length;i++){ if(Math.abs(S[i].z - z) < 260){ skip = true; break; } }
+  if(skip) continue;
+  for(var k=-1;k<=1;k+=2){
+    var sz = baseSz + ((n*53)%varSz);
+    var e  = mk('tree', TR[n%5]);
+    e.style.fontSize = sz+'px';
+    add(e, k*(baseX+((n*97)%varX)), 190 - sz*0.42, z + ((n*41)%160));
+    n++;
+  }
+}
+
+/* ---------- groups for the caption ---------- */
+var seen = {}, groups = [];
+S.forEach(function(s){
+  if(seen[s.z]) return;
+  seen[s.z] = 1;
+  var g = S.filter(function(x){ return x.z === s.z; });
+  groups.push({
+    z: s.z,
+    e: g[0].em,
+    s: g[0].s,
+    t: g.map(function(x){ return x.t.replace('&amp;','&'); }).join(' · ')
+  });
+});
+
+/* ---------- elements ---------- */
+var sky    = document.getElementById('sky'),
+    sun    = document.getElementById('sun'),
+    haze   = document.getElementById('haze'),
+    clouds = Array.prototype.slice.call(document.querySelectorAll('.cloud')),
+    hero   = document.getElementById('hero'),
+    clock  = document.getElementById('clock'),
+    cap    = document.getElementById('cap'),
+    endEl  = document.getElementById('end'),
+    bar    = document.getElementById('bar');
+
+var L = function(a,b,t){ return a.map(function(v,i){ return Math.round(v+(b[i]-v)*t); }).join(','); };
+function fmt(m){ var h=Math.floor(m/60), mm=Math.floor(m%60); return (h%12||12)+':'+String(mm).padStart(2,'0')+' '+(h>=12?'PM':'AM'); }
+function time(c){
+  for(var i=1;i<hist.length;i++){
+    if(c<=hist[i][0]){
+      var a=hist[i-1], b=hist[i];
+      return a[1]+(b[1]-a[1])*(c-a[0])/(b[0]-a[0]);
+    }
+  }
+  return 720;
+}
+var hist = [[0,430],[1300,450],[2600,480],[4000,510],[5400,575],[6800,650],[7600,695],[8200,700],[10000,720]];
+
+/* ---------- cached state ---------- */
+var cam = 0;
+var docH = 0, vw = window.innerWidth;
+var lastSky = '', lastHaze = '', lastSun = '', lastClock = '', lastCap = '', lastCapOp = -1;
+var lastBar = -1, lastHero = -1, endOn = false;
+
+/* measure scroll length ONCE-ish — ignores mobile URL-bar jitter */
+function measure(){
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  if(h < 1) h = 1;
+  if(!docH || Math.abs(h - docH) > 150) docH = h;   /* real change = rotation */
+  vw = window.innerWidth;
+}
+window.addEventListener('resize', measure, {passive:true});
+window.addEventListener('orientationchange', function(){ setTimeout(measure, 250); }, {passive:true});
+measure();
+
+/* ---------- main loop ---------- */
+function frame(){
+  var max = docH || 1;
+  var p = Math.min(1, Math.max(0, window.scrollY / max));
+  var target = p * MAX;
+
+  cam += (target - cam) * 0.09;
+  if(Math.abs(target - cam) < 0.1) cam = target;
+
+  var q = Math.min(1, cam / MAX);
+
+  /* world */
+  var bob  = cam > 5 ? Math.sin(cam/55) * 6 : 0;
+  var roll = Math.sin(cam/110) * 0.35;
+  world.style.transform = 'translate3d(0,'+bob.toFixed(1)+'px,'+cam.toFixed(1)+'px) rotateZ('+roll.toFixed(2)+'deg)';
+
+  /* sky + haze (only repaint when the colour actually changes) */
+  var top = L([22,48,88],[84,168,236],q);
+  var hz  = L([255,176,102],[208,236,255],q);
+
+  if(hz !== lastHaze){
+    lastHaze = hz;
+    haze.style.background = 'linear-gradient(rgba('+hz+',.9),rgba('+hz+',0))';
+  }
+  var skyCss = 'linear-gradient(rgb('+top+'),rgb('+hz+'))';
+  if(skyCss !== lastSky){
+    lastSky = skyCss;
+    sky.style.background = skyCss;
+  }
+
+  /* sun — % of sky height on mobile so it is always visible */
+  var sunTop = M ? Math.round(34 - q*20) + '%' : Math.round(32 - q*26) + 'vh';
+  if(sunTop !== lastSun){ lastSun = sunTop; sun.style.top = sunTop; }
+
+  /* clouds */
+  var cw = vw + 500;
+  for(var ci=0; ci<clouds.length; ci++){
+    clouds[ci].style.transform = 'translateX('+(((cam*(0.03+ci*0.01)+ci*300)%cw)-250)+'px)';
+  }
+
+  /* cards / arches / trees */
+  for(var i=0;i<items.length;i++){
+    var it = items[i];
+    var d = it.z - cam;
+    var o = 1;
+    if(d < 160) o = d/160;
+    if(d > 3000) o = Math.min(o, (4800-d)/1800);
+    if(o < 0) o = 0; else if(o > 1) o = 1;
+    o = Math.round(o*10)/10;                    /* quantised: far fewer style writes */
+    if(o !== it.o){
+      it.o = o;
+      it.el.style.opacity = o;
+      it.el.style.visibility = o > 0 ? 'visible' : 'hidden';
+    }
+  }
+
+  /* hero */
+  var ho = Math.round(Math.max(0, 1 - cam/500) * 20) / 20;
+  if(ho !== lastHero){ lastHero = ho; hero.style.opacity = ho; }
+
+  /* clock */
+  var cl = '🕢 ' + fmt(time(cam));
+  if(cl !== lastClock){ lastClock = cl; clock.textContent = cl; }
+
+  /* progress bar */
+  var bw = Math.round(q*100);
+  if(bw !== lastBar){ lastBar = bw; bar.style.width = bw + '%'; }
+
+  /* caption */
+  var g = null;
+  for(var gi=0; gi<groups.length; gi++){ if(groups[gi].z - cam > -250){ g = groups[gi]; break; } }
+  var msg = (g && cam > 500) ? g.e + ' ' + g.t + '<em>' + g.s + '</em>' : '';
+  if(msg !== lastCap){ lastCap = msg; cap.innerHTML = msg; }
+  var capOp = (msg && q < 0.95) ? 1 : 0;
+  if(capOp !== lastCapOp){ lastCapOp = capOp; cap.style.opacity = capOp; }
+
+  /* end card */
+  var on = q > 0.96;
+  if(on !== endOn){ endOn = on; endEl.classList.toggle('on', on); }
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+
+/* re-measure when webfont arrives (text metrics change) */
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(measure); }
+
+/* if the layout breakpoint changes (rotate / resize), just reload cleanly */
+MQ.addEventListener('change', function(){ location.reload(); });
+})();
+</script>
+</body>
+</html>
